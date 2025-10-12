@@ -69,18 +69,3 @@ The workflow follows these steps:
 5. **Describe Data** - Generates statistical summary
 6. **Output Results** - Prints the summary
 
-## Key Concepts for Students
-
-- **State Management**: `DataState` TypedDict defines shared state across nodes
-- **Nodes**: Individual functions that transform state
-- **Edges**: Define the flow between nodes
-- **Conditional Edges**: Route based on state conditions
-- **Graph Compilation**: Convert the workflow definition into an executable graph
-
-## Modifying This Example
-
-Students can extend this by:
-- Adding new data processing steps
-- Implementing different cleaning strategies
-- Adding LLM-based analysis nodes
-- Creating more complex conditional routing logic
