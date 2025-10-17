@@ -3,9 +3,14 @@ import pandas as pd
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from dotenv import load_dotenv
+import os
+from pathlib import Path
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Get project root directory
+PROJECT_ROOT = Path(__file__).parent.parent
 
 # ---------------------------
 # 1. Shared State Definition
@@ -121,9 +126,10 @@ def visualize_graph():
     """Save the workflow graph as a PNG image."""
     try:
         png_data = graph.get_graph().draw_mermaid_png()
-        with open("../outputs/missing_values_workflow.png", "wb") as f:
+        output_path = PROJECT_ROOT / "outputs" / "missing_values_workflow.png"
+        with open(output_path, "wb") as f:
             f.write(png_data)
-        print("Workflow graph saved to outputs/missing_values_workflow.png")
+        print("✓ Workflow graph saved to outputs/missing_values_workflow.png")
     except Exception as e:
         print(f"Could not generate graph visualization: {e}")
 
@@ -138,6 +144,7 @@ if __name__ == "__main__":
     
     # Run the workflow
     print("Running workflow...\n")
-    init_state: DataState = {"csv_path": "../data/example.csv", "df": None,
+    csv_path = str(PROJECT_ROOT / "data" / "example.csv")
+    init_state: DataState = {"csv_path": csv_path, "df": None,
                              "has_missing": False, "summary": ""}
     graph.invoke(init_state)
