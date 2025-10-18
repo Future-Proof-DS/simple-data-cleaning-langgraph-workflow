@@ -19,7 +19,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 class DataState(TypedDict):
     csv_path: str
     df: pd.DataFrame
-    action: Literal["clean_missing", "remove_outliers", "none"]
+    action: Literal["clean_missing", "remove_outliers", "both"]
     summary: str
 
 
@@ -41,16 +41,23 @@ def load_data(state: DataState) -> DataState:
 
 
 def summarize_data(state: DataState) -> DataState:
-    """Generate concise summary text from .describe() and .info()."""
+    """Generate comprehensive summary including missing values."""
     parts = []
+    
+    # 1. Basic statistics
     parts.append("DATA DESCRIPTION:\n")
     parts.append(state["df"].describe().to_string())
-    parts.append("\nDATA INFO:\n")
     
-    # Use StringIO to capture df.info() output
+    # 2. Dataset info
+    parts.append("\n\nDATA INFO:\n")
     buf = io.StringIO()
     state["df"].info(buf=buf)
     parts.append(buf.getvalue())
+    
+    # 3. Explicit missing value counts
+    parts.append("\n\nMISSING VALUE COUNTS:\n")
+    missing_counts = state["df"].isnull().sum()
+    parts.append(missing_counts.to_string())
     
     state["summary"] = "\n".join(parts)
     return state
@@ -61,12 +68,12 @@ def reasoning_node(state: DataState) -> DataState:
     prompt = (
         "You are a data science assistant. "
         "Given this dataset summary, decide which single action is most appropriate: "
-        "'clean_missing', 'remove_outliers', or 'none'.\n\n"
+        "'clean_missing', 'remove_outliers', or 'both'.\n\n"
         f"{state['summary']}\n\n"
-        "Respond only with one of: clean_missing, remove_outliers, none."
+        "Respond only with one of: clean_missing, remove_outliers, both."
     )
     decision = llm.invoke(prompt).content.strip().lower()
-    if decision not in ["clean_missing", "remove_outliers", "none"]:
+    if decision not in ["clean_missing", "remove_outliers", "both"]:
         decision = "none"
     state["action"] = decision
     return state
@@ -157,7 +164,7 @@ graph = workflow.compile()
 # ---------------------------
 
 if __name__ == "__main__":
-    csv_path = str(PROJECT_ROOT / "data" / "outliers.csv")
+    csv_path = str(PROJECT_ROOT / "data" / "missing.csv")
     init_state: DataState = {
         "csv_path": csv_path,
         "df": None,
