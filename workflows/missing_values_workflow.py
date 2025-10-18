@@ -1,10 +1,10 @@
-from typing_extensions import TypedDict
+from typing_extensions import TypedDict, Literal
 import pandas as pd
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from dotenv import load_dotenv
-import os
 from pathlib import Path
+import io
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,12 +19,12 @@ PROJECT_ROOT = Path(__file__).parent.parent
 class DataState(TypedDict):
     csv_path: str
     df: pd.DataFrame
-    has_missing: bool
+    action: Literal["clean_missing", "remove_outliers", "none"]
     summary: str
 
 
 # ---------------------------
-# 2. Initialize LLM (for reasoning)
+# 2. Initialize LLM
 # ---------------------------
 
 llm = ChatOpenAI(model="gpt-4o-mini")
@@ -35,116 +35,133 @@ llm = ChatOpenAI(model="gpt-4o-mini")
 # ---------------------------
 
 def load_data(state: DataState) -> DataState:
-    """Load CSV into a DataFrame."""
-    df = pd.read_csv(state["csv_path"])
-    state["df"] = df
+    """Load CSV into DataFrame."""
+    state["df"] = pd.read_csv(state["csv_path"])
     return state
 
 
-def inspect_data(state: DataState) -> DataState:
-    """Inspect data to check for missing values."""
-    df = state["df"]
-    state["has_missing"] = df.isna().any().any()
+def summarize_data(state: DataState) -> DataState:
+    """Generate concise summary text from .describe() and .info()."""
+    parts = []
+    parts.append("DATA DESCRIPTION:\n")
+    parts.append(state["df"].describe().to_string())
+    parts.append("\nDATA INFO:\n")
     
-    if state["has_missing"]:
-        missing_count = df.isna().sum().sum()
-        print(f"⚠️  Found {missing_count} missing value(s) - routing to cleaning step")
-    else:
-        print("✓ No missing values detected - skipping cleaning step")
+    # Use StringIO to capture df.info() output
+    buf = io.StringIO()
+    state["df"].info(buf=buf)
+    parts.append(buf.getvalue())
     
+    state["summary"] = "\n".join(parts)
+    return state
+
+
+def reasoning_node(state: DataState) -> DataState:
+    """Use LLM to decide whether to clean missing values or remove outliers."""
+    prompt = (
+        "You are a data science assistant. "
+        "Given this dataset summary, decide which single action is most appropriate: "
+        "'clean_missing', 'remove_outliers', or 'none'.\n\n"
+        f"{state['summary']}\n\n"
+        "Respond only with one of: clean_missing, remove_outliers, none."
+    )
+    decision = llm.invoke(prompt).content.strip().lower()
+    if decision not in ["clean_missing", "remove_outliers", "none"]:
+        decision = "none"
+    state["action"] = decision
     return state
 
 
 def handle_missing_values(state: DataState) -> DataState:
-    """Simple cleaning step: fill missing numeric values with mean."""
-    print("🧹 Cleaning data: filling missing numeric values with column means...")
+    """Fill missing numeric values with the column mean."""
     df = state["df"].copy()
     for col in df.select_dtypes(include="number").columns:
         df[col] = df[col].fillna(df[col].mean())
     state["df"] = df
-    print("✓ Data cleaning completed")
+    return state
+
+
+def remove_outliers(state: DataState) -> DataState:
+    """Remove outliers using IQR method."""
+    df = state["df"].copy()
+    numeric_cols = df.select_dtypes(include="number").columns
+    
+    for col in numeric_cols:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+        df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
+    
+    state["df"] = df
     return state
 
 
 def describe_data(state: DataState) -> DataState:
-    """Summarize numeric columns."""
-    summary = state["df"].describe().to_string()
-    state["summary"] = summary
+    """Describe numeric columns after any cleaning."""
+    state["summary"] = state["df"].describe().to_string()
     return state
 
 
 def output_results(state: DataState):
-    """Print summary result."""
-    print("\nData Summary:\n", state["summary"])
+    print(f"\n=== ACTION DECIDED: {state['action'].upper()} ===\n")
+    print(state["summary"])
 
 
 # ---------------------------
-# 4. Conditional Router
+# 4. Router Function
 # ---------------------------
 
-def route_missing(state: DataState) -> str:
-    """Route depending on whether data has missing values."""
-    return "Handle" if state["has_missing"] else "Skip"
+def route_action(state: DataState) -> str:
+    """Route based on LLM's chosen action."""
+    mapping = {
+        "clean_missing": "handle_missing_values",
+        "remove_outliers": "remove_outliers",
+        "none": "describe_data",
+    }
+    return mapping.get(state["action"], "describe_data")
 
 
 # ---------------------------
-# 5. Build the Graph
+# 5. Build Graph
 # ---------------------------
 
 workflow = StateGraph(DataState)
 
-# Add nodes
 workflow.add_node("load_data", load_data)
-workflow.add_node("inspect_data", inspect_data)
+workflow.add_node("summarize_data", summarize_data)
+workflow.add_node("reasoning_node", reasoning_node)
 workflow.add_node("handle_missing_values", handle_missing_values)
+workflow.add_node("remove_outliers", remove_outliers)
 workflow.add_node("describe_data", describe_data)
 workflow.add_node("output_results", output_results)
 
-# Add edges
 workflow.add_edge(START, "load_data")
-workflow.add_edge("load_data", "inspect_data")
-workflow.add_conditional_edges(
-    "inspect_data",
-    route_missing,
-    {
-        "Handle": "handle_missing_values",
-        "Skip": "describe_data"
-    }
-)
+workflow.add_edge("load_data", "summarize_data")
+workflow.add_edge("summarize_data", "reasoning_node")
+workflow.add_conditional_edges("reasoning_node", route_action, {
+    "handle_missing_values": "handle_missing_values",
+    "remove_outliers": "remove_outliers",
+    "describe_data": "describe_data",
+})
 workflow.add_edge("handle_missing_values", "describe_data")
+workflow.add_edge("remove_outliers", "describe_data")
 workflow.add_edge("describe_data", "output_results")
 workflow.add_edge("output_results", END)
 
-# Compile
 graph = workflow.compile()
 
 # ---------------------------
-# 6. Visualize the Graph
-# ---------------------------
-
-def visualize_graph():
-    """Save the workflow graph as a PNG image."""
-    try:
-        png_data = graph.get_graph().draw_mermaid_png()
-        output_path = PROJECT_ROOT / "outputs" / "missing_values_workflow.png"
-        with open(output_path, "wb") as f:
-            f.write(png_data)
-        print("✓ Workflow graph saved to outputs/missing_values_workflow.png")
-    except Exception as e:
-        print(f"Could not generate graph visualization: {e}")
-
-
-# ---------------------------
-# 7. Run Example
+# 6. Run Example
 # ---------------------------
 
 if __name__ == "__main__":
-    # Visualize the workflow structure
-    visualize_graph()
-    
-    # Run the workflow
-    print("Running workflow...\n")
-    csv_path = str(PROJECT_ROOT / "data" / "example.csv")
-    init_state: DataState = {"csv_path": csv_path, "df": None,
-                             "has_missing": False, "summary": ""}
+    csv_path = str(PROJECT_ROOT / "data" / "outliers.csv")
+    init_state: DataState = {
+        "csv_path": csv_path,
+        "df": None,
+        "action": "none",
+        "summary": "",
+    }
     graph.invoke(init_state)
