@@ -160,10 +160,30 @@ workflow.add_edge("output_results", END)
 graph = workflow.compile()
 
 # ---------------------------
-# 6. Run Example
+# 6. Visualize Graph
+# ---------------------------
+
+def save_graph_visualization():
+    """Save the workflow graph as a PNG image."""
+    try:
+        png_data = graph.get_graph().draw_mermaid_png()
+        output_path = PROJECT_ROOT / "outputs" / "workflow_graph.png"
+        with open(output_path, "wb") as f:
+            f.write(png_data)
+        print(f"Workflow graph saved to outputs/workflow_graph.png\n")
+    except Exception as e:
+        print(f"Could not generate graph visualization: {e}\n")
+
+
+# ---------------------------
+# 7. Run Example
 # ---------------------------
 
 if __name__ == "__main__":
+    # Save workflow visualization
+    save_graph_visualization()
+    
+    # Run the workflow
     csv_path = str(PROJECT_ROOT / "data" / "missing.csv")
     init_state: DataState = {
         "csv_path": csv_path,
