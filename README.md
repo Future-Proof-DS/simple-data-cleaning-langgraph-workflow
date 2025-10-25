@@ -21,6 +21,33 @@ The workflow follows these steps:
 
 ## Setup
 
+### Windows (PowerShell)
+
+1. **Verify Python is installed** (Python 3.9 or higher required):
+   ```powershell
+   python --version
+   ```
+   If not installed, download from [python.org](https://www.python.org/downloads/)
+
+2. **Install Poetry**:
+   ```powershell
+   (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+   ```
+   After installation, restart your terminal or IDE. If `poetry` command is not found, add `%APPDATA%\Python\Scripts` to your system PATH.
+
+3. **Install dependencies**:
+   ```powershell
+   poetry install
+   ```
+
+4. **Set up your OpenAI API key**:
+   ```powershell
+   copy .env.example .env
+   ```
+   Then edit `.env` and add your OpenAI API key: `OPENAI_API_KEY=sk-your-key-here`
+
+### macOS/Linux
+
 1. **Install Poetry** (if not already installed):
    ```bash
    curl -sSL https://install.python-poetry.org | python3 -
@@ -32,8 +59,10 @@ The workflow follows these steps:
    ```
 
 3. **Set up your OpenAI API key**:
-   - Copy `.env.example` to `.env`
-   - Add your OpenAI API key to `.env`
+   ```bash
+   cp .env.example .env
+   ```
+   Then edit `.env` and add your OpenAI API key: `OPENAI_API_KEY=sk-your-key-here`
 
 ## Running the Example
 
