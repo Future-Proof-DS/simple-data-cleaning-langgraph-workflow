@@ -1,4 +1,6 @@
-# LangGraph Workflow Example
+# LangGraph Workflow Example (Finished Version)
+
+> This is the finished copy of the project. `workflows/simple_clean_data_workflow.py` here contains the worked solution, including the "both" action. The student-facing starter is the separate [simple-data-cleaning-langgraph-workflow](https://github.com/Future-Proof-DS/simple-data-cleaning-langgraph-workflow) repo, so try the project there first and use this copy if you get stuck.
 
 A simple example demonstrating how to build workflows with LangGraph for data processing.
 
@@ -16,6 +18,7 @@ The workflow follows these steps:
 5. **Data Cleaning** - Can execute:
    - **Handle Missing Values** - Fills numeric missing values with column means
    - **Remove Outliers** - Removes outliers using IQR (Interquartile Range) method
+   - **Clean Both** - Fills missing values first, then removes outliers
 6. **Describe Data** - Generates statistical summary of cleaned data
 7. **Output Results** - Prints the action taken and final summary
 
@@ -73,7 +76,7 @@ poetry run python workflows/simple_clean_data_workflow.py
 
 The workflow will:
 1. Save a workflow graph visualization to `outputs/workflow_graph.png`
-2. Load data from `data/missing.csv` (you can change this in the script)
+2. Load data from `data/missing_and_outliers.csv` (you can change this in the script)
 3. Use an LLM to analyze the data and decide which cleaning action to take
 4. Execute the appropriate cleaning steps
 5. Display the results
