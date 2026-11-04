@@ -105,6 +105,15 @@ def remove_outliers(state: DataState) -> DataState:
     return state
 
 
+def clean_both(state: DataState) -> DataState:
+    """Handle both missing values and outliers."""
+    # First clean missing values
+    state = handle_missing_values(state)
+    # Then remove outliers
+    state = remove_outliers(state)
+    return state
+
+
 def describe_data(state: DataState) -> DataState:
     """Describe numeric columns after any cleaning."""
     state["summary"] = state["df"].describe().to_string()
@@ -125,6 +134,7 @@ def route_action(state: DataState) -> str:
     mapping = {
         "clean_missing": "handle_missing_values",
         "remove_outliers": "remove_outliers",
+        "both": "clean_both",
         "none": "describe_data",
     }
     return mapping.get(state["action"], "describe_data")
@@ -141,6 +151,7 @@ workflow.add_node("summarize_data", summarize_data)
 workflow.add_node("reasoning_node", reasoning_node)
 workflow.add_node("handle_missing_values", handle_missing_values)
 workflow.add_node("remove_outliers", remove_outliers)
+workflow.add_node("clean_both", clean_both)
 workflow.add_node("describe_data", describe_data)
 workflow.add_node("output_results", output_results)
 
@@ -150,10 +161,12 @@ workflow.add_edge("summarize_data", "reasoning_node")
 workflow.add_conditional_edges("reasoning_node", route_action, {
     "handle_missing_values": "handle_missing_values",
     "remove_outliers": "remove_outliers",
+    "clean_both": "clean_both",
     "describe_data": "describe_data",
 })
 workflow.add_edge("handle_missing_values", "describe_data")
 workflow.add_edge("remove_outliers", "describe_data")
+workflow.add_edge("clean_both", "describe_data")
 workflow.add_edge("describe_data", "output_results")
 workflow.add_edge("output_results", END)
 
@@ -184,7 +197,7 @@ if __name__ == "__main__":
     save_graph_visualization()
     
     # Run the workflow
-    csv_path = str(PROJECT_ROOT / "data" / "missing.csv")
+    csv_path = str(PROJECT_ROOT / "data" / "missing_and_outliers.csv")
     init_state: DataState = {
         "csv_path": csv_path,
         "df": None,
