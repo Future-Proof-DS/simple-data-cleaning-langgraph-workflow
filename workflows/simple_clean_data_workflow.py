@@ -43,22 +43,22 @@ def load_data(state: DataState) -> DataState:
 def summarize_data(state: DataState) -> DataState:
     """Generate comprehensive summary including missing values."""
     parts = []
-    
+
     # 1. Basic statistics
     parts.append("DATA DESCRIPTION:\n")
     parts.append(state["df"].describe().to_string())
-    
+
     # 2. Dataset info
     parts.append("\n\nDATA INFO:\n")
     buf = io.StringIO()
     state["df"].info(buf=buf)
     parts.append(buf.getvalue())
-    
+
     # 3. Explicit missing value counts
     parts.append("\n\nMISSING VALUE COUNTS:\n")
     missing_counts = state["df"].isnull().sum()
     parts.append(missing_counts.to_string())
-    
+
     state["summary"] = "\n".join(parts)
     return state
 
@@ -94,7 +94,7 @@ def remove_outliers(state: DataState) -> DataState:
     """Remove outliers using IQR method."""
     df = state["df"].copy()
     numeric_cols = df.select_dtypes(include="number").columns
-    
+
     for col in numeric_cols:
         Q1 = df[col].quantile(0.25)
         Q3 = df[col].quantile(0.75)
@@ -102,7 +102,7 @@ def remove_outliers(state: DataState) -> DataState:
         lower_bound = Q1 - 1.5 * IQR
         upper_bound = Q3 + 1.5 * IQR
         df = df[(df[col] >= lower_bound) & (df[col] <= upper_bound)]
-    
+
     state["df"] = df
     return state
 
@@ -185,7 +185,7 @@ def save_graph_visualization():
         output_path = PROJECT_ROOT / "outputs" / "workflow_graph.png"
         with open(output_path, "wb") as f:
             f.write(png_data)
-        print(f"Workflow graph saved to outputs/workflow_graph.png\n")
+        print("Workflow graph saved to outputs/workflow_graph.png\n")
     except Exception as e:
         print(f"Could not generate graph visualization: {e}\n")
 
@@ -197,7 +197,7 @@ def save_graph_visualization():
 if __name__ == "__main__":
     # Save workflow visualization
     save_graph_visualization()
-    
+
     # Run the workflow
     csv_path = str(PROJECT_ROOT / "data" / "missing_and_outliers.csv")
     init_state: DataState = {
