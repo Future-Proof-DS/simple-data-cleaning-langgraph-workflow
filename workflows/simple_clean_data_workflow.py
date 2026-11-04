@@ -67,8 +67,10 @@ def reasoning_node(state: DataState) -> DataState:
     """Use LLM to decide whether to clean missing values or remove outliers."""
     prompt = (
         "You are a data science assistant. "
-        "Given this dataset summary, decide which single action is most appropriate: "
-        "'clean_missing', 'remove_outliers', or 'both'.\n\n"
+        "Given this dataset summary, decide the most appropriate action:\n"
+        "- 'clean_missing' if ONLY missing values exist\n"
+        "- 'remove_outliers' if ONLY outliers exist (extreme values in min/max)\n"
+        "- 'both' if BOTH missing values AND outliers exist\n\n"
         f"{state['summary']}\n\n"
         "Respond only with one of: clean_missing, remove_outliers, both."
     )
