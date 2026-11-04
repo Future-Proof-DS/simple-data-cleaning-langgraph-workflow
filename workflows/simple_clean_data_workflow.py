@@ -27,7 +27,7 @@ class DataState(TypedDict):
 # 2. Initialize LLM
 # ---------------------------
 
-llm = ChatOpenAI(model="gpt-4o-mini")
+llm = ChatOpenAI(model="gpt-4o-mini", max_tokens=50, timeout=60, max_retries=0)
 
 
 # ---------------------------
