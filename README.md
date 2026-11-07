@@ -1,6 +1,6 @@
 # LangGraph Workflow Example (Finished Version)
 
-> This is the finished version of the Week 3 routing workflow, here as a lifeline if you get stuck. It shows one good way to reach the goal, not the only one, so try it yourself first. The student-facing starter is [simple-data-cleaning-langgraph-workflow](https://github.com/Future-Proof-DS/simple-data-cleaning-langgraph-workflow).
+> This is the finished version of the Week 3 routing workflow, here as a lifeline if you get stuck. It shows one good way to reach the goal, not the only one, so try it yourself first. The student-facing starter is [simple-data-cleaning-langgraph-workflow-start](https://github.com/Future-Proof-DS/simple-data-cleaning-langgraph-workflow-start).
 
 A simple example demonstrating how to build workflows with LangGraph for data processing.
 
